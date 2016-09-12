@@ -470,6 +470,7 @@ error:
                                                     error: (NSError **) outError
 {    
     NSString *marketingVersion = nil;
+    NSString *clientVersion = nil;
     
     /* Validate */
     if (applicationInfo == NULL) {
@@ -499,6 +500,12 @@ error:
     if (applicationInfo->marketing_version != NULL) {
         marketingVersion = [NSString stringWithUTF8String: applicationInfo->marketing_version];
     }
+    
+    // Add by zhengkanyan
+    NSUInteger userId = applicationInfo->user_id;
+    if (applicationInfo->client_version != NULL) {
+        clientVersion = [NSString stringWithUTF8String: applicationInfo->client_version];
+    }
 
     /* Done */
     NSString *identifier = [NSString stringWithUTF8String: applicationInfo->identifier];
@@ -506,7 +513,9 @@ error:
 
     return [[[PLCrashReportApplicationInfo alloc] initWithApplicationIdentifier: identifier
                                                              applicationVersion: version
-                                                    applicationMarketingVersion:marketingVersion] autorelease];
+                                                    applicationMarketingVersion: marketingVersion
+                                                                  clientVersion: clientVersion
+                                                                         userId: userId] autorelease];
 }
 
 

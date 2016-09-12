@@ -197,6 +197,7 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context);
         NSString *processPath = unknownString;
         NSString *parentProcessName = unknownString;
         NSString *parentProcessId = unknownString;
+        NSString *clientVersion = unknownString;
         
         /* Process information was not available in earlier crash report versions */
         if (report.hasProcessInfo) {
@@ -224,9 +225,17 @@ static NSInteger binaryImageSort(id binary1, id binary2, void *context);
         if (report.applicationInfo.applicationMarketingVersion != nil)
             versionString = [NSString stringWithFormat: @"%@ (%@)", report.applicationInfo.applicationMarketingVersion, report.applicationInfo.applicationVersion];
         
+        // Add by zhengkanyan
+        if (report.applicationInfo.clientVersion != nil) {
+            clientVersion = report.applicationInfo.clientVersion;
+        }
+        
+        
         [text appendFormat: @"Process:         %@ [%@]\n", processName, processId];
         [text appendFormat: @"Path:            %@\n", processPath];
         [text appendFormat: @"Identifier:      %@\n", report.applicationInfo.applicationIdentifier];
+        [text appendFormat: @"User ID:         %lu\n", (unsigned long)report.applicationInfo.userId];
+        [text appendFormat: @"Client Version:  %@\n", clientVersion];
         [text appendFormat: @"Version:         %@\n", versionString];
         [text appendFormat: @"Code Type:       %@\n", codeType];
         [text appendFormat: @"Parent Process:  %@ [%@]\n", parentProcessName, parentProcessId];

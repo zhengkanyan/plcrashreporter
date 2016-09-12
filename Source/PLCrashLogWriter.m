@@ -95,6 +95,11 @@ enum {
     /** CrashReport.app_info.app_marketing_version */
     PLCRASH_PROTO_APP_INFO_APP_MARKETING_VERSION_ID = 3,
 
+    /** Add by zhengkanyan CrashReport.app_info.user_id */
+    PLCRASH_PROTO_APP_INFO_USER_ID = 4,
+    
+    /** Add by zhengkanyan CrashReport.app_info.client_version */
+    PLCRASH_PROTO_APP_INFO_CLIENT_VERSION = 5,
 
     /** CrashReport.symbol.name */
     PLCRASH_PROTO_SYMBOL_NAME = 1,
@@ -253,6 +258,17 @@ enum {
     PLCRASH_PROTO_REPORT_INFO_UUID_ID = 2,
 };
 
+
+plcrash_error_t plcrash_log_writer_init (plcrash_log_writer_t *writer,
+                                         NSString *app_identifier,
+                                         NSString *app_version,
+                                         NSString *app_marketing_version,
+                                         plcrash_async_symbol_strategy_t symbol_strategy,
+                                         BOOL user_requested) {
+    
+    return plcrash_log_writer_init2(writer, app_identifier, app_version, app_marketing_version, nil, symbol_strategy, user_requested);
+}
+
 /**
  * Initialize a new crash log writer instance and issue a memory barrier upon completion. This fetches all necessary
  * environment information.
@@ -270,10 +286,11 @@ enum {
  *
  * @warning This function is not guaranteed to be async-safe, and must be called prior to enabling the crash handler.
  */
-plcrash_error_t plcrash_log_writer_init (plcrash_log_writer_t *writer,
+plcrash_error_t plcrash_log_writer_init2 (plcrash_log_writer_t *writer,
                                          NSString *app_identifier,
                                          NSString *app_version,
                                          NSString *app_marketing_version,
+                                         NSString *client_version,
                                          plcrash_async_symbol_strategy_t symbol_strategy,
                                          BOOL user_requested)
 {
@@ -292,7 +309,6 @@ plcrash_error_t plcrash_log_writer_init (plcrash_log_writer_t *writer,
         PLCF_DEBUG("Could not initialize our crash-time allocator: %d", err);
         return err;
     }
-    
 
     /* Initialize configuration */
     writer->symbol_strategy = symbol_strategy;
@@ -316,6 +332,9 @@ plcrash_error_t plcrash_log_writer_init (plcrash_log_writer_t *writer,
         writer->application_info.app_version = strdup([app_version UTF8String]);
         if (app_marketing_version != nil) {
             writer->application_info.app_marketing_version = strdup([app_marketing_version UTF8String]);
+        }
+        if (client_version) {
+            writer->application_info.client_version = strdup([client_version UTF8String]);
         }
     }
     
@@ -668,8 +687,10 @@ static size_t plcrash_writer_write_machine_info (plcrash_async_file_t *file, plc
  * @param app_identifier Application identifier
  * @param app_version Application version
  * @param app_marketing_version Application marketing version
+ * 
+ * Modified by zhengkanyan
  */
-static size_t plcrash_writer_write_app_info (plcrash_async_file_t *file, const char *app_identifier, const char *app_version, const char *app_marketing_version) {
+static size_t plcrash_writer_write_app_info (plcrash_async_file_t *file, const char *app_identifier, const char *app_version, const char *app_marketing_version, const char *client_version, const uint64_t user_id) {
     size_t rv = 0;
 
     /* App identifier */
@@ -681,6 +702,11 @@ static size_t plcrash_writer_write_app_info (plcrash_async_file_t *file, const c
     /* App marketing version */
     if (app_marketing_version != NULL)
         rv += plcrash_writer_pack(file, PLCRASH_PROTO_APP_INFO_APP_MARKETING_VERSION_ID, PLPROTOBUF_C_TYPE_STRING, app_marketing_version);
+    
+    // Add by zhengkanyan
+    rv += plcrash_writer_pack(file, PLCRASH_PROTO_APP_INFO_USER_ID, PLPROTOBUF_C_TYPE_UINT64, &user_id);
+    if (client_version != NULL)
+        rv += plcrash_writer_pack(file, PLCRASH_PROTO_APP_INFO_CLIENT_VERSION, PLPROTOBUF_C_TYPE_STRING, client_version);
     
     return rv;
 }
@@ -1314,11 +1340,11 @@ plcrash_error_t plcrash_log_writer_write (plcrash_log_writer_t *writer,
         uint32_t size;
 
         /* Determine size */
-        size = plcrash_writer_write_app_info(NULL, writer->application_info.app_identifier, writer->application_info.app_version, writer->application_info.app_marketing_version);
+        size = plcrash_writer_write_app_info(NULL, writer->application_info.app_identifier, writer->application_info.app_version, writer->application_info.app_marketing_version, writer->application_info.client_version, writer->application_info.user_id);
         
         /* Write message */
         plcrash_writer_pack(file, PLCRASH_PROTO_APP_INFO_ID, PLPROTOBUF_C_TYPE_MESSAGE, &size);
-        plcrash_writer_write_app_info(file, writer->application_info.app_identifier, writer->application_info.app_version, writer->application_info.app_marketing_version);
+        plcrash_writer_write_app_info(file, writer->application_info.app_identifier, writer->application_info.app_version, writer->application_info.app_marketing_version, writer->application_info.client_version, writer->application_info.user_id);
     }
     
     /* Process info */
@@ -1415,6 +1441,11 @@ plcrash_error_t plcrash_log_writer_write (plcrash_log_writer_t *writer,
     vm_deallocate(mach_task_self(), (vm_address_t)threads, sizeof(thread_t) * thread_count);
     
     return PLCRASH_ESUCCESS;
+}
+
+// Add by zhengkanyan
+void plcrash_log_writer_update(plcrash_log_writer_t *writer, uint64_t user_id) {
+    writer->application_info.user_id = user_id;
 }
 
 

@@ -106,6 +106,9 @@ typedef struct PLCrashReporterCallbacks {
     
     /** Application marketing version */
     NSString *_applicationMarketingVersion;
+    
+    // Add by zhengkanyan
+    NSString *_clientVersion;
 
     /** Path to the crash reporter internal data directory */
     NSString *_crashReportDirectory;
@@ -114,6 +117,10 @@ typedef struct PLCrashReporterCallbacks {
 + (PLCrashReporter *) sharedReporter PLCR_DEPRECATED;
 
 - (instancetype) initWithConfiguration: (PLCrashReporterConfig *) config;
+
+// Add by zhengkanyan
+- (instancetype) initWithClientVersion: (NSString *) clientVersion;
+- (instancetype) initWithConfiguration: (PLCrashReporterConfig *) configuration clientVersion: (NSString *) clientVersion;
 
 - (BOOL) hasPendingCrashReport;
 
@@ -135,5 +142,8 @@ typedef struct PLCrashReporterCallbacks {
 - (BOOL) enableCrashReporterAndReturnError: (NSError **) outError;
 
 - (void) setCrashCallbacks: (PLCrashReporterCallbacks *) callbacks;
+
+// Add by zhengkanyan
+- (void) updateCrashLogWriter: (NSUInteger) userId;
 
 @end

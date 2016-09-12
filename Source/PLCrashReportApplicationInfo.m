@@ -45,6 +45,8 @@
 - (id) initWithApplicationIdentifier: (NSString *) applicationIdentifier 
                   applicationVersion: (NSString *) applicationVersion
          applicationMarketingVersion: (NSString *) applicationMarketingVersion
+                       clientVersion: (NSString *) clientVersion
+                              userId: (NSUInteger) userId
 {
     if ((self = [super init]) == nil)
         return nil;
@@ -52,6 +54,8 @@
     _applicationIdentifier = [applicationIdentifier retain];
     _applicationVersion = [applicationVersion retain];
     _applicationMarketingVersion = [applicationMarketingVersion retain];
+    _userId = userId;
+    _clientVersion = [clientVersion retain];
 
     return self;
 }
@@ -60,11 +64,14 @@
     [_applicationIdentifier release];
     [_applicationVersion release];
     [_applicationMarketingVersion release];
+    [_clientVersion release];
     [super dealloc];
 }
 
 @synthesize applicationIdentifier = _applicationIdentifier;
 @synthesize applicationVersion = _applicationVersion;
 @synthesize applicationMarketingVersion = _applicationMarketingVersion;
+@synthesize userId = _userId;
+@synthesize clientVersion = _clientVersion;
 
 @end

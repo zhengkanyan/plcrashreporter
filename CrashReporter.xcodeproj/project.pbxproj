@@ -2865,6 +2865,9 @@
 				BuildIndependentTargetsInParallel = NO;
 				LastUpgradeCheck = 0610;
 				TargetAttributes = {
+					052A45CE136353FB00987004 = {
+						DevelopmentTeam = M473HHV7M5;
+					};
 					05CD33230EE94439000FDE88 = {
 						TestTargetID = 052A45CE136353FB00987004;
 					};
@@ -3918,6 +3921,7 @@
 					"-framework",
 					UIKit,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "coop.plausible.DemoCrash-iOS-Device.zky";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 			};
@@ -3945,6 +3949,7 @@
 					"-framework",
 					UIKit,
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "coop.plausible.DemoCrash-iOS-Device.zky";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
 				ZERO_LINK = NO;

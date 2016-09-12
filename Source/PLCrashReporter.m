@@ -341,6 +341,7 @@ static void uncaught_exception_handler (NSException *exception) {
 @interface PLCrashReporter (PrivateMethods)
 
 - (id) initWithBundle: (NSBundle *) bundle configuration: (PLCrashReporterConfig *) configuration;
+- (id) initWithBundle: (NSBundle *) bundle configuration: (PLCrashReporterConfig *) configuration clientVersion: (NSString *) clientVersion;
 - (id) initWithApplicationIdentifier: (NSString *) applicationIdentifier appVersion: (NSString *) applicationVersion appMarketingVersion: (NSString *) applicationMarketingVersion configuration: (PLCrashReporterConfig *) configuration;
 
 - (PLCrashMachExceptionServer *) enableMachExceptionServerWithPreviousPortSet: (PLCrashMachExceptionPortSet **) previousPortSet
@@ -409,6 +410,27 @@ static PLCrashReporter *sharedReporter = nil;
     return [self initWithBundle: [NSBundle mainBundle] configuration: configuration];
 }
 
+/**
+ * Initialize a new PLCrashReporter instance with the given configuration.
+ *
+ * @param clientVersion The client version of the SDK
+ *
+ * Add by zhengkanyan
+ */
+- (instancetype) initWithClientVersion: (NSString *) clientVersion {
+    return [self initWithBundle: [NSBundle mainBundle] configuration: [PLCrashReporterConfig defaultConfiguration] clientVersion: clientVersion];
+}
+
+/**
+ * Initialize a new PLCrashReporter instance with the given configuration.
+ *
+ * @param configuration The configuration to be used by this reporter instance.
+ *
+ * Add by zhengkanyan
+ */
+- (instancetype) initWithConfiguration: (PLCrashReporterConfig *) configuration clientVersion: (NSString *) clientVersion{
+    return [self initWithBundle: [NSBundle mainBundle] configuration: configuration];
+}
 
 /**
  * Returns YES if the application has previously crashed and
@@ -567,9 +589,7 @@ static PLCrashReporter *sharedReporter = nil;
     /* Crash log writer instance */
     assert(_applicationIdentifier != nil);
     assert(_applicationVersion != nil);
-    plcrash_log_writer_init(&signal_handler_context.writer, _applicationIdentifier, _applicationVersion, _applicationMarketingVersion, [self mapToAsyncSymbolicationStrategy: _config.symbolicationStrategy], false);
-    
-    
+    plcrash_log_writer_init2(&signal_handler_context.writer, _applicationIdentifier, _applicationVersion, _applicationMarketingVersion, _clientVersion, [self mapToAsyncSymbolicationStrategy: _config.symbolicationStrategy], false);
 
     /*
      * Enable the signal handler
@@ -632,6 +652,11 @@ static PLCrashReporter *sharedReporter = nil;
     /* Success */
     _enabled = YES;
     return YES;
+}
+
+// Add by zhengkanyan
+- (void) updateCrashLogWriter: (NSUInteger) userId {
+    plcrash_log_writer_update(&signal_handler_context.writer, userId);
 }
 
 /**
@@ -903,6 +928,42 @@ cleanup:
     return self;
 }
 
+/**
+ * @internal
+ *
+ * This is the designated initializer, but it is not intended
+ * to be called externally.
+ *
+ * @param applicationIdentifier The application identifier to be included in crash reports.
+ * @param applicationVersion The application version number to be included in crash reports.
+ * @param applicationMarketingVersion The application marketing version number to be included in crash reports.
+ * @param configuration The PLCrashReporter configuration.
+ * @param clientVersion The client version of SDK.
+ * @todo The appId and version values should be fetched from the PLCrashReporterConfig, once the API
+ * has been extended to allow supplying these values.
+ */
+- (id) initWithApplicationIdentifier: (NSString *) applicationIdentifier appVersion: (NSString *) applicationVersion appMarketingVersion: (NSString *) applicationMarketingVersion clientVersion: (NSString *)clientVersion configuration: (PLCrashReporterConfig *) configuration {
+    /* Initialize our superclass */
+    if ((self = [super init]) == nil)
+        return nil;
+    
+    /* Save the configuration */
+    _config = [configuration retain];
+    _applicationIdentifier = [applicationIdentifier retain];
+    _applicationVersion = [applicationVersion retain];
+    _applicationMarketingVersion = [applicationMarketingVersion retain];
+    _clientVersion = [clientVersion retain];
+    
+    /* No occurances of '/' should ever be in a bundle ID, but just to be safe, we escape them */
+    NSString *appIdPath = [applicationIdentifier stringByReplacingOccurrencesOfString: @"/" withString: @"_"];
+    
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+    NSString *cacheDir = [paths objectAtIndex: 0];
+    _crashReportDirectory = [[[cacheDir stringByAppendingPathComponent: PLCRASH_CACHE_DIR] stringByAppendingPathComponent: appIdPath] retain];
+    
+    return self;
+}
+
 
 /**
  * @internal
@@ -937,6 +998,42 @@ cleanup:
     }
     
     return [self initWithApplicationIdentifier: bundleIdentifier appVersion: bundleVersion appMarketingVersion:bundleMarketingVersion configuration: configuration];
+}
+
+/**
+ * @internal
+ *
+ * Derive the bundle identifier and version from @a bundle.
+ *
+ * @param bundle The application's main bundle.
+ * @param configuration The PLCrashReporter configuration to use for this instance.
+ * @param clientVersion The client version of SDK
+ */
+- (id) initWithBundle: (NSBundle *) bundle configuration: (PLCrashReporterConfig *) configuration clientVersion: (NSString *) clientVersion {
+    NSString *bundleIdentifier = [bundle bundleIdentifier];
+    NSString *bundleVersion = [[bundle infoDictionary] objectForKey: (NSString *) kCFBundleVersionKey];
+    NSString *bundleMarketingVersion = [[bundle infoDictionary] objectForKey: @"CFBundleShortVersionString"];
+    
+    /* Verify that the identifier is available */
+    if (bundleIdentifier == nil) {
+        const char *progname = getprogname();
+        if (progname == NULL) {
+            [NSException raise: PLCrashReporterException format: @"Can not determine process identifier or process name"];
+            [self release];
+            return nil;
+        }
+        
+        NSDEBUG(@"Warning -- bundle identifier, using process name %s", progname);
+        bundleIdentifier = [NSString stringWithUTF8String: progname];
+    }
+    
+    /* Verify that the version is available */
+    if (bundleVersion == nil) {
+        NSDEBUG(@"Warning -- bundle version unavailable");
+        bundleVersion = @"";
+    }
+    
+    return [self initWithApplicationIdentifier: bundleIdentifier appVersion: bundleVersion appMarketingVersion:bundleMarketingVersion clientVersion: clientVersion configuration: configuration];
 }
 
 #if PLCRASH_FEATURE_MACH_EXCEPTIONS
@@ -1097,7 +1194,5 @@ cleanup:
 - (NSString *) crashReportPath {
     return [[self crashReportDirectory] stringByAppendingPathComponent: PLCRASH_LIVE_CRASHREPORT];
 }
-
-
 
 @end

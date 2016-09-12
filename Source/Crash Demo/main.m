@@ -156,9 +156,22 @@ int main (int argc, char *argv[]) {
     }
     
     /* Configure our reporter */
-    PLCrashReporterConfig *config = [[[PLCrashReporterConfig alloc] initWithSignalHandlerType: PLCrashReporterSignalHandlerTypeMach
-                                                                        symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll] autorelease];
-    PLCrashReporter *reporter = [[[PLCrashReporter alloc] initWithConfiguration: config] autorelease];
+//    PLCrashReporterConfig *config = [[[PLCrashReporterConfig alloc] initWithSignalHandlerType: PLCrashReporterSignalHandlerTypeMach
+//                                                                        symbolicationStrategy: PLCrashReporterSymbolicationStrategyAll] autorelease];
+//    PLCrashReporter *reporter = [[[PLCrashReporter alloc] initWithConfiguration: config] autorelease];
+
+//    PLCrashReporter *reporter = [[PLCrashReporter alloc] init];
+    // Default PLCrashReporter init
+//    PLCrashReporter *crashReporter = [[PLCrashReporter alloc] initWithConfiguration:[PLCrashReporterConfig defaultConfiguration]];
+//    if ([crashReporter hasPendingCrashReport]) {
+//        [self handleCrashReport:crashReporter];
+//    }
+//    NSError *error = nil;
+//    if (![crashReporter enableCrashReporterAndReturnError:&error]) {
+//        NSLog(@"Warning: could not enable crashReporter: %@", error);
+//    }
+    
+    PLCrashReporter *reporter = [[PLCrashReporter alloc] initWithClientVersion:@"5.6.0"];
 
     /* Save any existing crash report. */
     save_crash_report(reporter);
@@ -175,6 +188,8 @@ int main (int argc, char *argv[]) {
     if (![reporter enableCrashReporterAndReturnError: &error]) {
         NSLog(@"Could not enable crash reporter: %@", error);
     }
+    
+    [reporter updateCrashLogWriter:34567890123];
 
     /* Add another stack frame */
     stackFrame();
